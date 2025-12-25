@@ -33,3 +33,8 @@ def init_db():
     """Initialize database tables"""
     Base.metadata.create_all(bind=engine)
 
+
+def close_db():
+    """Close database connections and dispose of the engine"""
+    engine.dispose()
+
