@@ -2,16 +2,11 @@
 Application configuration
 """
 import os
+from dotenv import load_dotenv
 from typing import Optional
 
-# Note: Install python-dotenv to use: pip install python-dotenv
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    # If python-dotenv is not installed, continue without it
-    pass
 
+load_dotenv()
 
 class Settings:
     """Application settings"""
