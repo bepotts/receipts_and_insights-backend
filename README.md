@@ -30,57 +30,145 @@ backend/
 │   ├── __init__.py
 │   ├── conftest.py        # Pytest configuration
 │   └── test_*.py          # Test files
-├── venv/                  # Virtual environment (not in git)
+├── .venv/                 # Virtual environment (created by Poetry, not in git)
 ├── .env                   # Environment variables (not in git)
 ├── .env.example           # Environment variables template
 ├── .gitignore
-├── requirements.txt       # Python dependencies
-├── pyproject.toml         # Project configuration
+├── poetry.lock            # Poetry lock file (dependency versions)
+├── requirements.txt       # Python dependencies (exported from Poetry)
+├── pyproject.toml         # Project configuration (Poetry, pytest, etc.)
 └── README.md              # This file
 ```
 
 ## Setup
 
-1. Create and activate a virtual environment:
+This project uses [Poetry](https://python-poetry.org/) for dependency management. Poetry provides a better way to manage Python dependencies and virtual environments.
+
+### Install Poetry
+
+If you don't have Poetry installed, follow the [official installation guide](https://python-poetry.org/docs/#installation):
+
+```bash
+# Using the official installer (recommended)
+curl -sSL https://install.python-poetry.org | python3 -
+```
+
+Or using pip (not recommended for production):
+```bash
+pip install poetry
+```
+
+### Project Setup
+
+1. Install dependencies (Poetry will create a virtual environment automatically):
    ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   poetry install
    ```
 
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. Copy environment variables:
+2. Copy environment variables:
    ```bash
    cp .env.example .env
    ```
 
-4. Edit `.env` file with your configuration values.
+3. Edit `.env` file with your configuration values.
 
-5. Run the application:
+4. Run the application:
    ```bash
-   python -m app.main
+   # Using Poetry
+   poetry run python -m app.main
+   
+   # Or using the Poetry script
+   poetry run start
+   
+   # Or using poe (poethepoet) if installed
+   poe start
    ```
+
+### Using Poetry
+
+**Activate the virtual environment:**
+```bash
+poetry shell
+```
+
+**Run commands within the Poetry environment:**
+```bash
+poetry run <command>
+```
+
+**Add a new dependency:**
+```bash
+poetry add <package-name>
+```
+
+**Add a development dependency:**
+```bash
+poetry add --group dev <package-name>
+```
+
+**Update dependencies:**
+```bash
+poetry update
+```
+
+**Export requirements.txt (if needed):**
+```bash
+poetry export -f requirements.txt --output requirements.txt --without-hashes
+```
 
 ## Development
 
 ### Running Tests
 ```bash
+# Using Poetry
+poetry run pytest
+
+# Or using poe (poethepoet)
+poe test
+
+# If virtual environment is activated
 pytest
 ```
 
 ### Code Formatting
 ```bash
+# Using Poetry
+poetry run black app tests
+poetry run isort app tests
+
+# Or if virtual environment is activated
 black app tests
 isort app tests
 ```
 
+### Linting
+```bash
+# Using Poetry
+poetry run ruff check .
+
+# Or using poe (poethepoet)
+poe lint
+
+# If virtual environment is activated
+ruff check .
+```
+
 ### Type Checking
 ```bash
+# Using Poetry
+poetry run mypy app
+
+# If virtual environment is activated
 mypy app
 ```
+
+### Available Poe Tasks
+
+This project uses [poethepoet](https://github.com/nat-n/poethepoet) (poe) for task automation. After installing dependencies with Poetry, you can use:
+
+- `poe start` - Start the development server with auto-reload
+- `poe test` - Run the test suite
+- `poe lint` - Run linting checks
 
 ## License
 
