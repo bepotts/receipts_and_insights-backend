@@ -9,7 +9,6 @@ from fastapi import status
 from app.main import app
 from app.core.database import get_db
 from app.models.user import User
-from app.schemas.user import UserCreate, UserUpdate
 
 # String constants
 USERS_ENDPOINT = "/api/v1/users/"

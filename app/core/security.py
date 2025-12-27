@@ -1,10 +1,9 @@
 """
 Security utilities
 """
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Optional
 
-from app.config import settings
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:

@@ -5,7 +5,7 @@ import pytest
 from unittest.mock import patch
 from fastapi.testclient import TestClient
 
-from app.main import app, lifespan, main
+from app.main import app, main
 
 
 # Pytest fixtures
