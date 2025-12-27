@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.v1.api import api_router
-from app.core.database import init_db, close_db
+from app.core.database import close_db, init_db
 
 
 @asynccontextmanager

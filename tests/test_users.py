@@ -2,13 +2,14 @@
 Unit tests for user endpoints
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock, patch
-from fastapi.testclient import TestClient
-from fastapi import status
+from unittest.mock import MagicMock, Mock, patch
 
-from app.main import app
+import pytest
+from fastapi import status
+from fastapi.testclient import TestClient
+
 from app.core.database import get_db
+from app.main import app
 from app.models.user import User
 
 # String constants
