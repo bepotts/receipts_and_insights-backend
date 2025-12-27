@@ -1,7 +1,7 @@
 """
 User schemas
 """
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr
 
 
 class UserBase(BaseModel):
@@ -25,7 +25,6 @@ class User(UserBase):
     """Schema for user response"""
     id: int | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 

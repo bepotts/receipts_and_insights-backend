@@ -60,6 +60,12 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "--cov=app --cov-report=html --cov-report=term-missing"
+markers = [
+    "testFastAPIApp: marks tests for FastAPI application instance",
+    "testMainFunction: marks tests for main() function",
+    "testAppEndpoints: marks tests for app endpoints and routing",
+    "testUserEndpoints: marks tests for user endpoints",
+]
 
 [tool.mypy]
 python_version = "3.10"
