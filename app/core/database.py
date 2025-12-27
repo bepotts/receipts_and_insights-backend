@@ -1,6 +1,7 @@
 """
 Database session management
 """
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 
@@ -37,4 +38,3 @@ def init_db():
 def close_db():
     """Close database connections and dispose of the engine"""
     engine.dispose()
-

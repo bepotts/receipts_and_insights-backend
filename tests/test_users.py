@@ -1,6 +1,7 @@
 """
 Unit tests for user endpoints
 """
+
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 from fastapi.testclient import TestClient
@@ -40,12 +41,13 @@ def mock_db_session():
 @pytest.fixture
 def override_get_db(mock_db_session):
     """Fixture to override get_db dependency"""
+
     def _get_db_override():
         try:
             yield mock_db_session
         finally:
             pass
-    
+
     app.dependency_overrides[get_db] = _get_db_override
     yield
     app.dependency_overrides.clear()
@@ -82,9 +84,9 @@ class TestGetUsers:
         mock_query = Mock()
         mock_query.offset.return_value.limit.return_value.all.return_value = sample_users_list
         mock_db_session.query.return_value = mock_query
-        
+
         response = test_client.get(USERS_ENDPOINT)
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data) == 2
@@ -100,9 +102,9 @@ class TestGetUsers:
         mock_query = Mock()
         mock_query.offset.return_value.limit.return_value.all.return_value = sample_users_list
         mock_db_session.query.return_value = mock_query
-        
+
         response = test_client.get(f"{USERS_ENDPOINT}?skip=0&limit=10")
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data) == 2
@@ -114,9 +116,9 @@ class TestGetUsers:
         mock_query = Mock()
         mock_query.offset.return_value.limit.return_value.all.return_value = []
         mock_db_session.query.return_value = mock_query
-        
+
         response = test_client.get(USERS_ENDPOINT)
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data == []
@@ -131,9 +133,9 @@ class TestGetUser:
         mock_query = Mock()
         mock_query.filter.return_value.first.return_value = sample_user
         mock_db_session.query.return_value = mock_query
-        
+
         response = test_client.get(USERS_ENDPOINT_WITH_ID_1)
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["id"] == 1
@@ -145,9 +147,9 @@ class TestGetUser:
         mock_query = Mock()
         mock_query.filter.return_value.first.return_value = None
         mock_db_session.query.return_value = mock_query
-        
+
         response = test_client.get(USERS_ENDPOINT_WITH_ID_999)
-        
+
         assert response.status_code == status.HTTP_404_NOT_FOUND
         data = response.json()
         assert MSG_NOT_FOUND in data["detail"].lower()
@@ -165,21 +167,21 @@ class TestCreateUser:
         mock_query_email = Mock()
         mock_query_email.filter.return_value.first.return_value = None
         mock_db_session.query.return_value = mock_query_email
-        
+
         # Create a mock user instance that will be returned
         mock_user_instance = MagicMock()
         mock_user_instance.id = 1
         mock_user_instance.name = NEW_USER_NAME
         mock_user_instance.email = NEW_USER_EMAIL
         mock_user_class.return_value = mock_user_instance
-        
+
         mock_db_session.add = Mock()
         mock_db_session.commit = Mock()
         mock_db_session.refresh = Mock()
-        
+
         user_data = {"name": NEW_USER_NAME, "email": NEW_USER_EMAIL}
         response = test_client.post(USERS_ENDPOINT, json=user_data)
-        
+
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
         assert data["name"] == NEW_USER_NAME
@@ -197,11 +199,11 @@ class TestCreateUser:
         mock_query = Mock()
         mock_query.filter.return_value.first.return_value = sample_user
         mock_db_session.query.return_value = mock_query
-        
+
         user_data = {"name": DUPLICATE_USER_NAME, "email": TEST_USER_EMAIL}
-        
+
         response = test_client.post(USERS_ENDPOINT, json=user_data)
-        
+
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         data = response.json()
         assert MSG_ALREADY_EXISTS in data["detail"].lower()
@@ -218,12 +220,13 @@ class TestUpdateUser:
         # Mock finding the user by ID
         mock_query_user = Mock()
         mock_query_user.filter.return_value.first.return_value = sample_user
-        
+
         # Mock checking email uniqueness (should return None for unique email)
         mock_query_email = Mock()
         mock_query_email.filter.return_value.first.return_value = None
-        
+
         call_count = [0]
+
         def query_side_effect(model):
             call_count[0] += 1
             if call_count[0] == 1:
@@ -232,15 +235,15 @@ class TestUpdateUser:
             else:
                 # Subsequent calls: checking email uniqueness
                 return mock_query_email
-        
+
         mock_db_session.query.side_effect = query_side_effect
         mock_db_session.commit = Mock()
         mock_db_session.refresh = Mock()
-        
+
         user_update_data = {"name": UPDATED_NAME, "email": UPDATED_EMAIL}
-        
+
         response = test_client.put(USERS_ENDPOINT_WITH_ID_1, json=user_update_data)
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["name"] == UPDATED_NAME
@@ -254,15 +257,15 @@ class TestUpdateUser:
         mock_query = Mock()
         mock_query.filter.return_value.first.return_value = sample_user
         mock_db_session.query.return_value = mock_query
-        
+
         mock_db_session.commit = Mock()
         mock_db_session.refresh = Mock()
-        
+
         # Update only name
         user_update_data = {"name": UPDATED_NAME_ONLY}
-        
+
         response = test_client.put(USERS_ENDPOINT_WITH_ID_1, json=user_update_data)
-        
+
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["name"] == UPDATED_NAME_ONLY
@@ -274,11 +277,11 @@ class TestUpdateUser:
         mock_query = Mock()
         mock_query.filter.return_value.first.return_value = None
         mock_db_session.query.return_value = mock_query
-        
+
         user_update_data = {"name": UPDATED_NAME}
-        
+
         response = test_client.put(USERS_ENDPOINT_WITH_ID_999, json=user_update_data)
-        
+
         assert response.status_code == status.HTTP_404_NOT_FOUND
         data = response.json()
         assert MSG_NOT_FOUND in data["detail"].lower()
@@ -288,28 +291,29 @@ class TestUpdateUser:
         EXISTING_USER_NAME = "Existing User"
         EXISTING_EMAIL = "existing@example.com"
         existing_user = User(id=2, name=EXISTING_USER_NAME, email=EXISTING_EMAIL)
-        
+
         # First query returns the user to update, second query returns another user with that email
         mock_query_user = Mock()
         mock_query_user.filter.return_value.first.return_value = sample_user
-        
+
         mock_query_email = Mock()
         mock_query_email.filter.return_value.first.return_value = existing_user
-        
+
         call_count = [0]
+
         def query_side_effect(model):
             call_count[0] += 1
             if call_count[0] == 1:
                 return mock_query_user
             else:
                 return mock_query_email
-        
+
         mock_db_session.query.side_effect = query_side_effect
-        
+
         user_update_data = {"email": EXISTING_EMAIL}
-        
+
         response = test_client.put(USERS_ENDPOINT_WITH_ID_1, json=user_update_data)
-        
+
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         data = response.json()
         assert MSG_ALREADY_EXISTS in data["detail"].lower()
@@ -326,12 +330,12 @@ class TestDeleteUser:
         mock_query = Mock()
         mock_query.filter.return_value.first.return_value = sample_user
         mock_db_session.query.return_value = mock_query
-        
+
         mock_db_session.delete = Mock()
         mock_db_session.commit = Mock()
-        
+
         response = test_client.delete(USERS_ENDPOINT_WITH_ID_1)
-        
+
         assert response.status_code == status.HTTP_204_NO_CONTENT
         mock_db_session.delete.assert_called_once_with(sample_user)
         mock_db_session.commit.assert_called_once()
@@ -342,9 +346,9 @@ class TestDeleteUser:
         mock_query = Mock()
         mock_query.filter.return_value.first.return_value = None
         mock_db_session.query.return_value = mock_query
-        
+
         response = test_client.delete(USERS_ENDPOINT_WITH_ID_999)
-        
+
         assert response.status_code == status.HTTP_404_NOT_FOUND
         data = response.json()
         assert MSG_NOT_FOUND in data["detail"].lower()

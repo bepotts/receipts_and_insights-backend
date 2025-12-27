@@ -1,6 +1,7 @@
 """
 User API endpoints
 """
+
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
@@ -41,7 +42,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="User with this email already exists",
         )
-    
+
     db_user = User(name=user.name, email=str(user.email))
     db.add(db_user)
     db.commit()
@@ -58,20 +59,22 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"User with id {user_id} not found",
         )
-    
+
     # Update only provided fields
     if user_update.name is not None:
         db_user.name = user_update.name
     if user_update.email is not None:
         # Check if email is already taken by another user
-        existing_user = db.query(User).filter(User.email == str(user_update.email), User.id != user_id).first()
+        existing_user = (
+            db.query(User).filter(User.email == str(user_update.email), User.id != user_id).first()
+        )
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User with this email already exists",
             )
         db_user.email = str(user_update.email)
-    
+
     db.commit()
     db.refresh(db_user)
     return db_user
@@ -89,4 +92,3 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db.delete(db_user)
     db.commit()
     return None
-
