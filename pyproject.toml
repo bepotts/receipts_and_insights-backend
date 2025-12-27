@@ -80,4 +80,6 @@ ignore_missing_imports = true
 start = "uvicorn app.main:app --reload"
 test = "pytest"
 lint = "ruff check ."
+format = { shell = "black . && isort ." }
+format-files = { script = "scripts/format_files.sh", help = "Format specific Python files with black and isort" }
 
