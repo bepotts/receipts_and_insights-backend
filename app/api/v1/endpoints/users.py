@@ -64,7 +64,7 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
 
     # Update only provided fields
     if user_update.name is not None:
-        db_user.name = user_update.name
+        setattr(db_user, "name", user_update.name)
     if user_update.email is not None:
         # Check if email is already taken by another user
         existing_user = (
@@ -75,7 +75,7 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User with this email already exists",
             )
-        db_user.email = str(user_update.email)
+        setattr(db_user, "email", str(user_update.email))
 
     db.commit()
     db.refresh(db_user)
