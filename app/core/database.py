@@ -1,8 +1,9 @@
 """
 Database session management
 """
+
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.config import settings
 from app.models import Base
@@ -10,7 +11,9 @@ from app.models import Base
 # Create database engine
 engine = create_engine(
     settings.DATABASE_URL or "sqlite:///./receipts.db",
-    connect_args={"check_same_thread": False} if "sqlite" in (settings.DATABASE_URL or "") else {},
+    connect_args={"check_same_thread": False}
+    if "sqlite" in (settings.DATABASE_URL or "")
+    else {},
 )
 
 # Create session factory
@@ -37,4 +40,3 @@ def init_db():
 def close_db():
     """Close database connections and dispose of the engine"""
     engine.dispose()
-

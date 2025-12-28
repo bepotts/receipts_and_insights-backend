@@ -18,6 +18,7 @@ uvicorn = { version = "0.40.0", extras = ["standard"] }
 SQLAlchemy = "2.0.45"
 pydantic = "2.12.5"
 python-dotenv = "1.2.1"
+passlib = { version = "^1.7.4", extras = ["argon2"] }
 annotated-doc = "0.0.4"
 annotated-types = "0.7.0"
 typing-extensions = "4.15.0"
@@ -78,4 +79,5 @@ ignore_missing_imports = true
 start = "uvicorn app.main:app --reload"
 test = "pytest"
 lint = "ruff check ."
+format = "ruff format ."
 

@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: poe-format
+        name: poe format (staged files)
+        entry: poe format
+        language: system
+        types_or: [python]
+        require_serial: true
