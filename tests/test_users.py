@@ -2,7 +2,7 @@
 Unit tests for user endpoints
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import ANY, MagicMock, Mock, patch
 
 import pytest
 from fastapi import status
@@ -19,6 +19,7 @@ USERS_ENDPOINT_WITH_ID_999 = "/api/v1/users/999"
 
 TEST_USER_NAME = "Test User"
 TEST_USER_EMAIL = "test@example.com"
+TEST_PASSWORD = "testpassword123"
 USER_ONE_NAME = "User One"
 USER_ONE_EMAIL = "user1@example.com"
 USER_TWO_NAME = "User Two"
@@ -186,7 +187,11 @@ class TestCreateUser:
         mock_db_session.commit = Mock()
         mock_db_session.refresh = Mock()
 
-        user_data = {"name": NEW_USER_NAME, "email": NEW_USER_EMAIL}
+        user_data = {
+            "name": NEW_USER_NAME,
+            "email": NEW_USER_EMAIL,
+            "password": TEST_PASSWORD,
+        }
         response = test_client.post(USERS_ENDPOINT, json=user_data)
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -195,7 +200,7 @@ class TestCreateUser:
         assert data["email"] == NEW_USER_EMAIL
         assert data["id"] == 1
         mock_user_class.assert_called_once_with(
-            name=NEW_USER_NAME, email=NEW_USER_EMAIL
+            name=NEW_USER_NAME, email=NEW_USER_EMAIL, password=ANY
         )
         mock_db_session.add.assert_called_once_with(mock_user_instance)
         mock_db_session.commit.assert_called_once()
@@ -211,7 +216,11 @@ class TestCreateUser:
         mock_query.filter.return_value.first.return_value = sample_user
         mock_db_session.query.return_value = mock_query
 
-        user_data = {"name": DUPLICATE_USER_NAME, "email": TEST_USER_EMAIL}
+        user_data = {
+            "name": DUPLICATE_USER_NAME,
+            "email": TEST_USER_EMAIL,
+            "password": TEST_PASSWORD,
+        }
 
         response = test_client.post(USERS_ENDPOINT, json=user_data)
 
