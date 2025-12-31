@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.core.security import get_password_hash
 from app.models.user import User
 from app.schemas.user import User as UserSchema
 from app.schemas.user import UserCreate, UserUpdate
@@ -45,7 +46,8 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
             detail="User with this email already exists",
         )
 
-    db_user = User(name=user.name, email=str(user.email))
+    hashed_password = get_password_hash(user.password)
+    db_user = User(name=user.name, email=str(user.email), password=hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -64,18 +66,22 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
 
     # Update only provided fields
     if user_update.name is not None:
-        setattr(db_user, "name", user_update.name)
+        db_user.name = user_update.name
     if user_update.email is not None:
         # Check if email is already taken by another user
         existing_user = (
-            db.query(User).filter(User.email == str(user_update.email), User.id != user_id).first()
+            db.query(User)
+            .filter(User.email == str(user_update.email), User.id != user_id)
+            .first()
         )
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User with this email already exists",
             )
-        setattr(db_user, "email", str(user_update.email))
+        db_user.email = str(user_update.email)
+    if user_update.password is not None:
+        db_user.password = get_password_hash(user_update.password)
 
     db.commit()
     db.refresh(db_user)

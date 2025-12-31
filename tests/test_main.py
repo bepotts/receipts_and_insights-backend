@@ -88,7 +88,9 @@ class TestMainFunction:
             ("reload", True),
         ],
     )
-    def test_main_uvicorn_parameters(self, mock_uvicorn_run, expected_key, expected_value):
+    def test_main_uvicorn_parameters(
+        self, mock_uvicorn_run, expected_key, expected_value
+    ):
         """Test individual uvicorn.run parameters"""
         main()
         call_args = mock_uvicorn_run.call_args
@@ -118,7 +120,9 @@ class TestAppEndpoints:
             ("/openapi.json", 200),
         ],
     )
-    def test_documentation_endpoints_accessible(self, test_client, endpoint, expected_status):
+    def test_documentation_endpoints_accessible(
+        self, test_client, endpoint, expected_status
+    ):
         """Test that documentation endpoints are accessible"""
         response = test_client.get(endpoint)
         assert response.status_code == expected_status

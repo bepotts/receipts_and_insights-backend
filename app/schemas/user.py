@@ -15,7 +15,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """Schema for creating a user"""
 
-    pass
+    password: str
 
 
 class UserUpdate(BaseModel):
@@ -23,6 +23,7 @@ class UserUpdate(BaseModel):
 
     name: str | None = None
     email: EmailStr | None = None
+    password: str | None = None
 
 
 class User(UserBase):

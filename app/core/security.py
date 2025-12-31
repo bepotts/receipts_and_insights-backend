@@ -2,36 +2,36 @@
 Security utilities
 """
 
+import warnings
 from datetime import timedelta
 from typing import Optional
+
+from passlib.context import CryptContext
+
+# Suppress deprecation warning from passlib's argon2 handler
+# Library is no longer maintained. May need to update to a different library.
+warnings.filterwarnings(
+    "ignore",
+    category=DeprecationWarning,
+    module="passlib.handlers.argon2",
+)
+
+# Create a single CryptContext instance for reuse
+pwd_context = CryptContext(schemes=["argon2"], deprecated="auto")
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a password against a hash.
-
-    Note: Install passlib and bcrypt to use:
-    pip install passlib[bcrypt]
     """
-    # TODO: Implement password verification
-    # from passlib.context import CryptContext
-    # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    # return pwd_context.verify(plain_password, hashed_password)
-    return False
+    return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password: str) -> str:
     """
     Hash a password.
-
-    Note: Install passlib and bcrypt to use:
-    pip install passlib[bcrypt]
     """
-    # TODO: Implement password hashing
-    # from passlib.context import CryptContext
-    # pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-    # return pwd_context.hash(password)
-    return ""
+    return pwd_context.hash(password)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:

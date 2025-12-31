@@ -2,7 +2,7 @@
 Unit tests for user endpoints
 """
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import ANY, MagicMock, Mock, patch
 
 import pytest
 from fastapi import status
@@ -19,6 +19,7 @@ USERS_ENDPOINT_WITH_ID_999 = "/api/v1/users/999"
 
 TEST_USER_NAME = "Test User"
 TEST_USER_EMAIL = "test@example.com"
+TEST_PASSWORD = "testpassword123"
 USER_ONE_NAME = "User One"
 USER_ONE_EMAIL = "user1@example.com"
 USER_TWO_NAME = "User Two"
@@ -83,7 +84,9 @@ class TestGetUsers:
     def test_get_users_success(self, test_client, mock_db_session, sample_users_list):
         """Test successful retrieval of all users"""
         mock_query = Mock()
-        mock_query.offset.return_value.limit.return_value.all.return_value = sample_users_list
+        mock_query.offset.return_value.limit.return_value.all.return_value = (
+            sample_users_list
+        )
         mock_db_session.query.return_value = mock_query
 
         response = test_client.get(USERS_ENDPOINT)
@@ -98,10 +101,14 @@ class TestGetUsers:
         assert data[1]["name"] == USER_TWO_NAME
         assert data[1]["email"] == USER_TWO_EMAIL
 
-    def test_get_users_with_pagination(self, test_client, mock_db_session, sample_users_list):
+    def test_get_users_with_pagination(
+        self, test_client, mock_db_session, sample_users_list
+    ):
         """Test getting users with pagination parameters"""
         mock_query = Mock()
-        mock_query.offset.return_value.limit.return_value.all.return_value = sample_users_list
+        mock_query.offset.return_value.limit.return_value.all.return_value = (
+            sample_users_list
+        )
         mock_db_session.query.return_value = mock_query
 
         response = test_client.get(f"{USERS_ENDPOINT}?skip=0&limit=10")
@@ -180,7 +187,11 @@ class TestCreateUser:
         mock_db_session.commit = Mock()
         mock_db_session.refresh = Mock()
 
-        user_data = {"name": NEW_USER_NAME, "email": NEW_USER_EMAIL}
+        user_data = {
+            "name": NEW_USER_NAME,
+            "email": NEW_USER_EMAIL,
+            "password": TEST_PASSWORD,
+        }
         response = test_client.post(USERS_ENDPOINT, json=user_data)
 
         assert response.status_code == status.HTTP_201_CREATED
@@ -188,12 +199,16 @@ class TestCreateUser:
         assert data["name"] == NEW_USER_NAME
         assert data["email"] == NEW_USER_EMAIL
         assert data["id"] == 1
-        mock_user_class.assert_called_once_with(name=NEW_USER_NAME, email=NEW_USER_EMAIL)
+        mock_user_class.assert_called_once_with(
+            name=NEW_USER_NAME, email=NEW_USER_EMAIL, password=ANY
+        )
         mock_db_session.add.assert_called_once_with(mock_user_instance)
         mock_db_session.commit.assert_called_once()
         mock_db_session.refresh.assert_called_once_with(mock_user_instance)
 
-    def test_create_user_duplicate_email(self, test_client, mock_db_session, sample_user):
+    def test_create_user_duplicate_email(
+        self, test_client, mock_db_session, sample_user
+    ):
         """Test creating a user with an email that already exists"""
         DUPLICATE_USER_NAME = "Duplicate User"
         # Mock that user with email already exists
@@ -201,7 +216,11 @@ class TestCreateUser:
         mock_query.filter.return_value.first.return_value = sample_user
         mock_db_session.query.return_value = mock_query
 
-        user_data = {"name": DUPLICATE_USER_NAME, "email": TEST_USER_EMAIL}
+        user_data = {
+            "name": DUPLICATE_USER_NAME,
+            "email": TEST_USER_EMAIL,
+            "password": TEST_PASSWORD,
+        }
 
         response = test_client.post(USERS_ENDPOINT, json=user_data)
 
@@ -287,7 +306,9 @@ class TestUpdateUser:
         data = response.json()
         assert MSG_NOT_FOUND in data["detail"].lower()
 
-    def test_update_user_duplicate_email(self, test_client, mock_db_session, sample_user):
+    def test_update_user_duplicate_email(
+        self, test_client, mock_db_session, sample_user
+    ):
         """Test updating a user with an email that's already taken by another user"""
         EXISTING_USER_NAME = "Existing User"
         EXISTING_EMAIL = "existing@example.com"

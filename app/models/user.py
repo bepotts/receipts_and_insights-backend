@@ -3,13 +3,9 @@ User database model
 """
 
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.orm import declarative_base
 
-
-class Base(DeclarativeBase):
-    """Base class for all database models"""
-
-    pass
+Base = declarative_base()
 
 
 class User(Base):
@@ -20,3 +16,4 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String, nullable=False)
     email = Column(String, unique=True, nullable=False, index=True)
+    password = Column(String, nullable=False)
