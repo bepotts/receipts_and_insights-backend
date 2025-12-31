@@ -24,14 +24,14 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
     Verify a password against a hash.
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(plain_password, hashed_password)  # type: ignore[no-any-return]
 
 
 def get_password_hash(password: str) -> str:
     """
     Hash a password.
     """
-    return pwd_context.hash(password)
+    return pwd_context.hash(password)  # type: ignore[no-any-return]
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
