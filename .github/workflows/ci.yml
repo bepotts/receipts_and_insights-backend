@@ -76,8 +76,8 @@ jobs:
       - name: Run Ruff linter
         run: poetry run ruff check .
 
-      - name: Check code formatting with Black
-        run: poetry run black --check app tests
+      - name: Check code formatting with Ruff
+        run: poetry run ruff format --check app tests
 
       - name: Check import sorting with isort
         run: poetry run isort --check-only app tests
