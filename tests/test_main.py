@@ -75,7 +75,8 @@ class TestMainFunction:
 
         # Check the arguments
         call_args = mock_uvicorn_run.call_args
-        assert call_args[0][0] == "app.main:app"
+        # The first argument should be the app instance, not a string
+        assert call_args[0][0] == app
         assert call_args[1]["host"] == "0.0.0.0"
         assert call_args[1]["port"] == 8000
         assert call_args[1]["reload"] is True
