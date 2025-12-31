@@ -26,6 +26,7 @@ async def lifespan(app: FastAPI):
     print("Closing database on shutdown")
     close_db()
 
+
 def create_app() -> FastAPI:
     """Create a FastAPI application instance"""
     app = FastAPI(
@@ -45,6 +46,7 @@ app = create_app()
 def main():
     """Application entry point"""
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
 
 
