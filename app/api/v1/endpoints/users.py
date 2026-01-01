@@ -104,8 +104,6 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     return None
 
 
-def format_email(email: str) -> str | None:
+def format_email(email: str) -> str:
     """Format an email address"""
-    if not email:
-        return None
     return email.strip().lower()
