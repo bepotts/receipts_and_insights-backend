@@ -68,6 +68,7 @@ plugins = ["sqlalchemy.ext.mypy.plugin"]
 [tool.poe.tasks]
 start = "uvicorn app.main:app --reload"
 test = "pytest"
+type-check = "mypy app"
 lint = "ruff check ."
 format = "ruff format ."
 

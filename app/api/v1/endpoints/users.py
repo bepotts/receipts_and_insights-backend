@@ -38,8 +38,9 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     """Create a new user"""
+    formatted_email = format_email(str(user.email))
     # Check if user with email already exists
-    db_user = db.query(User).filter(User.email == user.email).first()
+    db_user = db.query(User).filter(User.email == formatted_email).first()
     if db_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -47,7 +48,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         )
 
     hashed_password = get_password_hash(user.password)
-    db_user = User(name=user.name, email=str(user.email), password=hashed_password)
+    db_user = User(name=user.name, email=formatted_email, password=hashed_password)
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -69,9 +70,10 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
         db_user.name = user_update.name
     if user_update.email is not None:
         # Check if email is already taken by another user
+        formatted_email = format_email(str(user_update.email))
         existing_user = (
             db.query(User)
-            .filter(User.email == str(user_update.email), User.id != user_id)
+            .filter(User.email == formatted_email, User.id != user_id)
             .first()
         )
         if existing_user:
@@ -79,7 +81,7 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="User with this email already exists",
             )
-        db_user.email = str(user_update.email)
+        db_user.email = formatted_email
     if user_update.password is not None:
         db_user.password = get_password_hash(user_update.password)
 
@@ -100,3 +102,10 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db.delete(db_user)
     db.commit()
     return None
+
+
+def format_email(email: str) -> str | None:
+    """Format an email address"""
+    if not email:
+        return None
+    return email.strip().lower()
