@@ -1,0 +1,26 @@
+# Caddyfile for Receipts and Insights Backend
+
+app.localhost {
+  reverse_proxy 127.0.0.1:3000
+}
+
+api.localhost {
+  reverse_proxy 127.0.0.1:8000
+}
+
+# Production:
+# yourdomain.com {
+#     reverse_proxy localhost:8000 {
+#         header_up Host {host}
+#         header_up X-Real-IP {remote}
+#         header_up X-Forwarded-Proto {scheme}
+#         header_up X-Forwarded-Host {host}
+#     }
+# 
+#     encode gzip zstd
+# 
+#     log {
+#         output file /var/log/caddy/access.log
+#         format json
+#     }
+# }

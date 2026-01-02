@@ -71,6 +71,7 @@ test = "pytest"
 type-check = "mypy app"
 lint = "ruff check ."
 format = "ruff format ."
+caddy = "caddy run --config Caddyfile"
 
 [dependency-groups]
 dev = [
