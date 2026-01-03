@@ -72,6 +72,12 @@ type-check = "mypy app"
 lint = "ruff check ."
 format = "ruff format ."
 caddy = "caddy run --config Caddyfile"
+migrate = "alembic upgrade head"
+migrate-create = "alembic revision"
+migrate-autogenerate = "alembic revision --autogenerate"
+migrate-downgrade = "alembic downgrade -1"
+migrate-current = "alembic current"
+migrate-history = "alembic history"
 
 [dependency-groups]
 dev = [
