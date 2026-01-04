@@ -7,8 +7,6 @@ from alembic import context
 
 # Import your models' Base and all models
 from app.models import Base
-from app.models.user import User
-from app.models.user_session import UserSession
 
 # Import config
 from app.config import settings
