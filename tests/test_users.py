@@ -168,9 +168,34 @@ class TestGetUser:
 class TestCreateUser:
     """Tests for POST /users/ endpoint"""
 
+    @patch("app.api.v1.endpoints.users.UserSession")
+    @patch("app.api.v1.endpoints.users.secrets")
+    @patch("app.api.v1.endpoints.users.datetime")
     @patch("app.api.v1.endpoints.users.User")
-    def test_create_user_success(self, mock_user_class, test_client, mock_db_session):
+    def test_create_user_success(
+        self,
+        mock_user_class,
+        mock_datetime,
+        mock_secrets,
+        mock_user_session_class,
+        test_client,
+        mock_db_session,
+    ):
         """Test successful creation of a new user"""
+        # Mock session token
+        MOCK_SESSION_TOKEN = "mock_session_token_12345"
+        mock_secrets.token_urlsafe.return_value = MOCK_SESSION_TOKEN
+
+        # Mock datetime.utcnow() for expires_at calculation
+        from datetime import datetime as dt
+
+        mock_now = dt(2024, 1, 1, 12, 0, 0)
+        mock_datetime.utcnow.return_value = mock_now
+        # Keep timedelta working normally by not mocking it
+        from datetime import timedelta
+
+        mock_datetime.timedelta = timedelta
+
         # Mock checking if user exists (should return None for new user)
         mock_query_email = Mock()
         mock_query_email.filter.return_value.first.return_value = None
@@ -182,6 +207,10 @@ class TestCreateUser:
         mock_user_instance.name = NEW_USER_NAME
         mock_user_instance.email = NEW_USER_EMAIL
         mock_user_class.return_value = mock_user_instance
+
+        # Create a mock user session instance
+        mock_session_instance = MagicMock()
+        mock_user_session_class.return_value = mock_session_instance
 
         mock_db_session.add = Mock()
         mock_db_session.commit = Mock()
@@ -199,11 +228,26 @@ class TestCreateUser:
         assert data["name"] == NEW_USER_NAME
         assert data["email"] == NEW_USER_EMAIL
         assert data["id"] == 1
+        assert data["session_token"] == MOCK_SESSION_TOKEN
+
+        # Verify User was created
         mock_user_class.assert_called_once_with(
             name=NEW_USER_NAME, email=NEW_USER_EMAIL, password=ANY
         )
-        mock_db_session.add.assert_called_once_with(mock_user_instance)
-        mock_db_session.commit.assert_called_once()
+        # Verify UserSession was created
+        mock_user_session_class.assert_called_once()
+        call_kwargs = mock_user_session_class.call_args[1]
+        assert call_kwargs["user_id"] == 1
+        assert call_kwargs["session_token"] == MOCK_SESSION_TOKEN
+        assert call_kwargs["is_active"] is True
+
+        # Verify both User and UserSession were added
+        assert mock_db_session.add.call_count == 2
+        mock_db_session.add.assert_any_call(mock_user_instance)
+        mock_db_session.add.assert_any_call(mock_session_instance)
+
+        # Verify commit was called twice (once for user, once for session)
+        assert mock_db_session.commit.call_count == 2
         mock_db_session.refresh.assert_called_once_with(mock_user_instance)
 
     def test_create_user_duplicate_email(

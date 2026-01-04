@@ -30,5 +30,6 @@ class User(UserBase):
     """Schema for user response"""
 
     id: int | None = None
+    session_token: str | None = None
 
     model_config = ConfigDict(from_attributes=True)

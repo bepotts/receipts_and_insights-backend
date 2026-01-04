@@ -2,6 +2,8 @@
 User API endpoints
 """
 
+import secrets
+from datetime import datetime, timedelta
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.security import get_password_hash
 from app.models.user import User
+from app.models.user_session import UserSession
 from app.schemas.user import User as UserSchema
 from app.schemas.user import UserCreate, UserUpdate
 
@@ -52,7 +55,28 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    return db_user
+
+    # Create a new user session
+    session_token = secrets.token_urlsafe(32)
+    expires_at = datetime.utcnow() + timedelta(days=30)  # Session expires in 30 days
+
+    user_session = UserSession(
+        user_id=db_user.id,
+        session_token=session_token,
+        expires_at=expires_at,
+        is_active=True,
+    )
+    db.add(user_session)
+    db.commit()
+
+    # Return user with session_token
+    user_dict = {
+        "id": db_user.id,
+        "name": db_user.name,
+        "email": db_user.email,
+        "session_token": session_token,
+    }
+    return user_dict
 
 
 @router.put("/{user_id}", response_model=UserSchema)
