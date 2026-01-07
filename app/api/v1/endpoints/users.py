@@ -51,7 +51,12 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
         )
 
     hashed_password = get_password_hash(user.password)
-    db_user = User(name=user.name, email=formatted_email, password=hashed_password)
+    db_user = User(
+        first_name=user.first_name,
+        last_name=user.last_name,
+        email=formatted_email,
+        password=hashed_password,
+    )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
@@ -72,7 +77,8 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     # Return user with session_token
     user_dict = {
         "id": db_user.id,
-        "name": db_user.name,
+        "first_name": db_user.first_name,
+        "last_name": db_user.last_name,
         "email": db_user.email,
         "session_token": session_token,
     }
@@ -90,8 +96,10 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
         )
 
     # Update only provided fields
-    if user_update.name is not None:
-        db_user.name = user_update.name
+    if user_update.first_name is not None:
+        db_user.first_name = user_update.first_name
+    if user_update.last_name is not None:
+        db_user.last_name = user_update.last_name
     if user_update.email is not None:
         # Check if email is already taken by another user
         formatted_email = format_email(str(user_update.email))

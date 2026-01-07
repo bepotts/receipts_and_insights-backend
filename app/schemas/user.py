@@ -8,7 +8,8 @@ from pydantic import BaseModel, ConfigDict, EmailStr
 class UserBase(BaseModel):
     """Base user schema with common fields"""
 
-    name: str
+    first_name: str
+    last_name: str
     email: EmailStr
 
 
@@ -21,7 +22,8 @@ class UserCreate(UserBase):
 class UserUpdate(BaseModel):
     """Schema for updating a user (all fields optional)"""
 
-    name: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
     email: EmailStr | None = None
     password: str | None = None
 

@@ -17,16 +17,21 @@ USERS_ENDPOINT = "/api/v1/users/"
 USERS_ENDPOINT_WITH_ID_1 = "/api/v1/users/1"
 USERS_ENDPOINT_WITH_ID_999 = "/api/v1/users/999"
 
-TEST_USER_NAME = "Test User"
+TEST_USER_FIRST_NAME = "Test"
+TEST_USER_LAST_NAME = "User"
 TEST_USER_EMAIL = "test@example.com"
 TEST_PASSWORD = "testpassword123"
-USER_ONE_NAME = "User One"
+USER_ONE_FIRST_NAME = "User"
+USER_ONE_LAST_NAME = "One"
 USER_ONE_EMAIL = "user1@example.com"
-USER_TWO_NAME = "User Two"
+USER_TWO_FIRST_NAME = "User"
+USER_TWO_LAST_NAME = "Two"
 USER_TWO_EMAIL = "user2@example.com"
-NEW_USER_NAME = "New User"
+NEW_USER_FIRST_NAME = "New"
+NEW_USER_LAST_NAME = "User"
 NEW_USER_EMAIL = "newuser@example.com"
-UPDATED_NAME = "Updated Name"
+UPDATED_FIRST_NAME = "Updated"
+UPDATED_LAST_NAME = "Name"
 
 MSG_NOT_FOUND = "not found"
 MSG_ALREADY_EXISTS = "already exists"
@@ -64,7 +69,12 @@ def test_client(override_get_db):
 @pytest.fixture
 def sample_user():
     """Fixture for sample user model"""
-    user = User(id=1, name=TEST_USER_NAME, email=TEST_USER_EMAIL)
+    user = User(
+        id=1,
+        first_name=TEST_USER_FIRST_NAME,
+        last_name=TEST_USER_LAST_NAME,
+        email=TEST_USER_EMAIL,
+    )
     return user
 
 
@@ -72,8 +82,18 @@ def sample_user():
 def sample_users_list():
     """Fixture for sample list of users"""
     return [
-        User(id=1, name=USER_ONE_NAME, email=USER_ONE_EMAIL),
-        User(id=2, name=USER_TWO_NAME, email=USER_TWO_EMAIL),
+        User(
+            id=1,
+            first_name=USER_ONE_FIRST_NAME,
+            last_name=USER_ONE_LAST_NAME,
+            email=USER_ONE_EMAIL,
+        ),
+        User(
+            id=2,
+            first_name=USER_TWO_FIRST_NAME,
+            last_name=USER_TWO_LAST_NAME,
+            email=USER_TWO_EMAIL,
+        ),
     ]
 
 
@@ -95,10 +115,12 @@ class TestGetUsers:
         data = response.json()
         assert len(data) == 2
         assert data[0]["id"] == 1
-        assert data[0]["name"] == USER_ONE_NAME
+        assert data[0]["first_name"] == USER_ONE_FIRST_NAME
+        assert data[0]["last_name"] == USER_ONE_LAST_NAME
         assert data[0]["email"] == USER_ONE_EMAIL
         assert data[1]["id"] == 2
-        assert data[1]["name"] == USER_TWO_NAME
+        assert data[1]["first_name"] == USER_TWO_FIRST_NAME
+        assert data[1]["last_name"] == USER_TWO_LAST_NAME
         assert data[1]["email"] == USER_TWO_EMAIL
 
     def test_get_users_with_pagination(
@@ -147,7 +169,8 @@ class TestGetUser:
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data["id"] == 1
-        assert data["name"] == TEST_USER_NAME
+        assert data["first_name"] == TEST_USER_FIRST_NAME
+        assert data["last_name"] == TEST_USER_LAST_NAME
         assert data["email"] == TEST_USER_EMAIL
 
     def test_get_user_not_found(self, test_client, mock_db_session):
@@ -204,7 +227,8 @@ class TestCreateUser:
         # Create a mock user instance that will be returned
         mock_user_instance = MagicMock()
         mock_user_instance.id = 1
-        mock_user_instance.name = NEW_USER_NAME
+        mock_user_instance.first_name = NEW_USER_FIRST_NAME
+        mock_user_instance.last_name = NEW_USER_LAST_NAME
         mock_user_instance.email = NEW_USER_EMAIL
         mock_user_class.return_value = mock_user_instance
 
@@ -217,7 +241,8 @@ class TestCreateUser:
         mock_db_session.refresh = Mock()
 
         user_data = {
-            "name": NEW_USER_NAME,
+            "first_name": NEW_USER_FIRST_NAME,
+            "last_name": NEW_USER_LAST_NAME,
             "email": NEW_USER_EMAIL,
             "password": TEST_PASSWORD,
         }
@@ -225,14 +250,18 @@ class TestCreateUser:
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["name"] == NEW_USER_NAME
+        assert data["first_name"] == NEW_USER_FIRST_NAME
+        assert data["last_name"] == NEW_USER_LAST_NAME
         assert data["email"] == NEW_USER_EMAIL
         assert data["id"] == 1
         assert data["session_token"] == MOCK_SESSION_TOKEN
 
         # Verify User was created
         mock_user_class.assert_called_once_with(
-            name=NEW_USER_NAME, email=NEW_USER_EMAIL, password=ANY
+            first_name=NEW_USER_FIRST_NAME,
+            last_name=NEW_USER_LAST_NAME,
+            email=NEW_USER_EMAIL,
+            password=ANY,
         )
         # Verify UserSession was created
         mock_user_session_class.assert_called_once()
@@ -254,14 +283,16 @@ class TestCreateUser:
         self, test_client, mock_db_session, sample_user
     ):
         """Test creating a user with an email that already exists"""
-        DUPLICATE_USER_NAME = "Duplicate User"
+        DUPLICATE_USER_FIRST_NAME = "Duplicate"
+        DUPLICATE_USER_LAST_NAME = "User"
         # Mock that user with email already exists
         mock_query = Mock()
         mock_query.filter.return_value.first.return_value = sample_user
         mock_db_session.query.return_value = mock_query
 
         user_data = {
-            "name": DUPLICATE_USER_NAME,
+            "first_name": DUPLICATE_USER_FIRST_NAME,
+            "last_name": DUPLICATE_USER_LAST_NAME,
             "email": TEST_USER_EMAIL,
             "password": TEST_PASSWORD,
         }
@@ -304,19 +335,24 @@ class TestUpdateUser:
         mock_db_session.commit = Mock()
         mock_db_session.refresh = Mock()
 
-        user_update_data = {"name": UPDATED_NAME, "email": UPDATED_EMAIL}
+        user_update_data = {
+            "first_name": UPDATED_FIRST_NAME,
+            "last_name": UPDATED_LAST_NAME,
+            "email": UPDATED_EMAIL,
+        }
 
         response = test_client.put(USERS_ENDPOINT_WITH_ID_1, json=user_update_data)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["name"] == UPDATED_NAME
+        assert data["first_name"] == UPDATED_FIRST_NAME
+        assert data["last_name"] == UPDATED_LAST_NAME
         assert data["email"] == UPDATED_EMAIL
         mock_db_session.commit.assert_called_once()
 
     def test_update_user_partial(self, test_client, mock_db_session, sample_user):
         """Test updating only some fields of a user"""
-        UPDATED_NAME_ONLY = "Updated Name Only"
+        UPDATED_FIRST_NAME_ONLY = "Updated"
         # Mock finding the user by ID
         mock_query = Mock()
         mock_query.filter.return_value.first.return_value = sample_user
@@ -325,14 +361,14 @@ class TestUpdateUser:
         mock_db_session.commit = Mock()
         mock_db_session.refresh = Mock()
 
-        # Update only name
-        user_update_data = {"name": UPDATED_NAME_ONLY}
+        # Update only first_name
+        user_update_data = {"first_name": UPDATED_FIRST_NAME_ONLY}
 
         response = test_client.put(USERS_ENDPOINT_WITH_ID_1, json=user_update_data)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        assert data["name"] == UPDATED_NAME_ONLY
+        assert data["first_name"] == UPDATED_FIRST_NAME_ONLY
         mock_db_session.commit.assert_called_once()
 
     def test_update_user_not_found(self, test_client, mock_db_session):
@@ -342,7 +378,10 @@ class TestUpdateUser:
         mock_query.filter.return_value.first.return_value = None
         mock_db_session.query.return_value = mock_query
 
-        user_update_data = {"name": UPDATED_NAME}
+        user_update_data = {
+            "first_name": UPDATED_FIRST_NAME,
+            "last_name": UPDATED_LAST_NAME,
+        }
 
         response = test_client.put(USERS_ENDPOINT_WITH_ID_999, json=user_update_data)
 
@@ -354,9 +393,15 @@ class TestUpdateUser:
         self, test_client, mock_db_session, sample_user
     ):
         """Test updating a user with an email that's already taken by another user"""
-        EXISTING_USER_NAME = "Existing User"
+        EXISTING_USER_FIRST_NAME = "Existing"
+        EXISTING_USER_LAST_NAME = "User"
         EXISTING_EMAIL = "existing@example.com"
-        existing_user = User(id=2, name=EXISTING_USER_NAME, email=EXISTING_EMAIL)
+        existing_user = User(
+            id=2,
+            first_name=EXISTING_USER_FIRST_NAME,
+            last_name=EXISTING_USER_LAST_NAME,
+            email=EXISTING_EMAIL,
+        )
 
         # First query returns the user to update, second query returns another user with that email
         mock_query_user = Mock()
