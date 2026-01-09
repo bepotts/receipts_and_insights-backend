@@ -3,7 +3,7 @@ User API endpoints
 """
 
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,6 +15,7 @@ from app.models.user import User
 from app.models.user_session import UserSession
 from app.schemas.user import User as UserSchema
 from app.schemas.user import UserCreate, UserUpdate
+from app.utils.email import format_email
 
 router = APIRouter()
 
@@ -38,6 +39,7 @@ def get_user(user_id: int, db: Session = Depends(get_db)):
     return user
 
 
+# Maybe this function shouldn't exist? It's the same as the login endpoint.
 @router.post("/", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
 def create_user(user: UserCreate, db: Session = Depends(get_db)):
     """Create a new user"""
@@ -63,7 +65,9 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 
     # Create a new user session
     session_token = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(days=30)  # Session expires in 30 days
+    expires_at = datetime.now(timezone.utc) + timedelta(
+        days=30
+    )  # Session expires in 30 days
 
     user_session = UserSession(
         user_id=db_user.id,
@@ -134,8 +138,3 @@ def delete_user(user_id: int, db: Session = Depends(get_db)):
     db.delete(db_user)
     db.commit()
     return None
-
-
-def format_email(email: str) -> str:
-    """Format an email address"""
-    return email.strip().lower()

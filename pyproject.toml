@@ -55,6 +55,7 @@ markers = [
     "testMainFunction: marks tests for main() function",
     "testAppEndpoints: marks tests for app endpoints and routing",
     "testUserEndpoints: marks tests for user endpoints",
+    "testAuthEndpoints: marks tests for auth endpoints",
 ]
 
 [tool.mypy]
