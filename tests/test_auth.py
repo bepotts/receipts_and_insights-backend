@@ -91,7 +91,8 @@ class TestLogin:
         mock_secrets.token_urlsafe.return_value = MOCK_SESSION_TOKEN
 
         # Mock datetime.now(timezone.utc) for expires_at calculation
-        from datetime import datetime as dt, timezone, timedelta
+        from datetime import datetime as dt
+        from datetime import timedelta, timezone
 
         mock_now = dt(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
         mock_datetime.now.return_value = mock_now
