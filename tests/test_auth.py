@@ -210,9 +210,9 @@ class TestLogout:
         mock_db_session.delete = Mock()
         mock_db_session.commit = Mock()
 
-        response = test_client.post(
-            AUTH_LOGOUT_ENDPOINT, cookies={"session_token": MOCK_SESSION_TOKEN}
-        )
+        # Set cookie on client instance
+        test_client.cookies["session_token"] = MOCK_SESSION_TOKEN
+        response = test_client.post(AUTH_LOGOUT_ENDPOINT)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -221,7 +221,7 @@ class TestLogout:
         # Verify cookie was cleared (empty value)
         assert "set-cookie" in response.headers
         cookie_header = response.headers["set-cookie"]
-        assert "session_token=\"\"" in cookie_header
+        assert 'session_token=""' in cookie_header
         assert "Max-Age=0" in cookie_header
         assert "HttpOnly" in cookie_header
         assert "Secure" in cookie_header
@@ -243,9 +243,9 @@ class TestLogout:
         mock_db_session.delete = Mock()
         mock_db_session.commit = Mock()
 
-        response = test_client.post(
-            AUTH_LOGOUT_ENDPOINT, cookies={"session_token": MOCK_SESSION_TOKEN}
-        )
+        # Set cookie on client instance
+        test_client.cookies["session_token"] = MOCK_SESSION_TOKEN
+        response = test_client.post(AUTH_LOGOUT_ENDPOINT)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
@@ -254,7 +254,7 @@ class TestLogout:
         # Verify cookie was still cleared even though session doesn't exist
         assert "set-cookie" in response.headers
         cookie_header = response.headers["set-cookie"]
-        assert "session_token=\"\"" in cookie_header
+        assert 'session_token=""' in cookie_header
         assert "Max-Age=0" in cookie_header
 
         # Verify no delete was attempted (session not found)
@@ -278,7 +278,7 @@ class TestLogout:
         # Verify cookie was still cleared
         assert "set-cookie" in response.headers
         cookie_header = response.headers["set-cookie"]
-        assert "session_token=\"\"" in cookie_header
+        assert 'session_token=""' in cookie_header
         assert "Max-Age=0" in cookie_header
 
         # Verify no database operations were attempted
