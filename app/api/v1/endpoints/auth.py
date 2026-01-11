@@ -5,7 +5,7 @@ Authentication API endpoints
 import secrets
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -76,3 +76,34 @@ def login(user: UserCreate, response: Response, db: Session = Depends(get_db)):
         "session_token": session_token,
     }
     return user_dict
+
+
+@router.post("/logout", status_code=status.HTTP_200_OK)
+def logout(
+    response: Response,
+    session_token: str | None = Cookie(None),
+    db: Session = Depends(get_db),
+):
+    """Logout a user by removing their session token"""
+    if session_token:
+        # Find and remove the session from the database
+        db_session = (
+            db.query(UserSession)
+            .filter(UserSession.session_token == session_token)
+            .first()
+        )
+        if db_session:
+            db.delete(db_session)
+            db.commit()
+
+    # Set an empty session_token cookie to clear it
+    response.set_cookie(
+        key="session_token",
+        value="",
+        max_age=0,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+    )
+
+    return {"message": "Logged out successfully"}

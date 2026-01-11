@@ -13,6 +13,7 @@ from app.main import app
 
 # String constants
 AUTH_LOGIN_ENDPOINT = "/api/v1/auth/login"
+AUTH_LOGOUT_ENDPOINT = "/api/v1/auth/logout"
 
 TEST_USER_FIRST_NAME = "Test"
 TEST_USER_LAST_NAME = "User"
@@ -188,3 +189,99 @@ class TestLogin:
         data = response.json()
         assert MSG_ALREADY_EXISTS in data["detail"].lower()
         assert MSG_EMAIL in data["detail"].lower()
+
+
+@pytest.mark.testAuthEndpoints
+class TestLogout:
+    """Tests for POST /auth/logout endpoint"""
+
+    def test_logout_success(self, test_client, mock_db_session):
+        """Test successful logout with valid session token"""
+        MOCK_SESSION_TOKEN = "mock_session_token_12345"
+
+        # Mock existing session in database
+        mock_session = MagicMock()
+        mock_session.session_token = MOCK_SESSION_TOKEN
+
+        mock_query = Mock()
+        mock_query.filter.return_value.first.return_value = mock_session
+        mock_db_session.query.return_value = mock_query
+
+        mock_db_session.delete = Mock()
+        mock_db_session.commit = Mock()
+
+        response = test_client.post(
+            AUTH_LOGOUT_ENDPOINT, cookies={"session_token": MOCK_SESSION_TOKEN}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["message"] == "Logged out successfully"
+
+        # Verify cookie was cleared (empty value)
+        assert "set-cookie" in response.headers
+        cookie_header = response.headers["set-cookie"]
+        assert "session_token=\"\"" in cookie_header
+        assert "Max-Age=0" in cookie_header
+        assert "HttpOnly" in cookie_header
+        assert "Secure" in cookie_header
+        assert "SameSite=lax" in cookie_header
+
+        # Verify session was deleted from database
+        mock_db_session.delete.assert_called_once_with(mock_session)
+        mock_db_session.commit.assert_called_once()
+
+    def test_logout_session_not_found(self, test_client, mock_db_session):
+        """Test logout when session token doesn't exist in database"""
+        MOCK_SESSION_TOKEN = "non_existent_token"
+
+        # Mock that session doesn't exist in database
+        mock_query = Mock()
+        mock_query.filter.return_value.first.return_value = None
+        mock_db_session.query.return_value = mock_query
+
+        mock_db_session.delete = Mock()
+        mock_db_session.commit = Mock()
+
+        response = test_client.post(
+            AUTH_LOGOUT_ENDPOINT, cookies={"session_token": MOCK_SESSION_TOKEN}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["message"] == "Logged out successfully"
+
+        # Verify cookie was still cleared even though session doesn't exist
+        assert "set-cookie" in response.headers
+        cookie_header = response.headers["set-cookie"]
+        assert "session_token=\"\"" in cookie_header
+        assert "Max-Age=0" in cookie_header
+
+        # Verify no delete was attempted (session not found)
+        mock_db_session.delete.assert_not_called()
+
+    def test_logout_no_cookie(self, test_client, mock_db_session):
+        """Test logout when no cookie is provided"""
+        # Mock database query (shouldn't be called, but set up anyway)
+        mock_query = Mock()
+        mock_db_session.query.return_value = mock_query
+
+        mock_db_session.delete = Mock()
+        mock_db_session.commit = Mock()
+
+        response = test_client.post(AUTH_LOGOUT_ENDPOINT)
+
+        assert response.status_code == status.HTTP_200_OK
+        data = response.json()
+        assert data["message"] == "Logged out successfully"
+
+        # Verify cookie was still cleared
+        assert "set-cookie" in response.headers
+        cookie_header = response.headers["set-cookie"]
+        assert "session_token=\"\"" in cookie_header
+        assert "Max-Age=0" in cookie_header
+
+        # Verify no database operations were attempted
+        mock_db_session.query.assert_not_called()
+        mock_db_session.delete.assert_not_called()
+        mock_db_session.commit.assert_not_called()
