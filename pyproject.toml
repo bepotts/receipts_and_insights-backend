@@ -2,9 +2,7 @@
 name = "receipts-and-insights-backend"
 version = "0.1.0"
 description = "Backend API for Receipts and Insights"
-authors = [
-    { name = "Brandon Potts", email = "bepotts47@gmail.com" }
-]
+authors = [{ name = "Brandon Potts", email = "bepotts47@gmail.com" }]
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10,<4.0"
@@ -47,9 +45,7 @@ python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = "--cov=app --cov-report=html --cov-report=term-missing"
-filterwarnings = [
-    "ignore::DeprecationWarning:passlib.handlers.argon2",
-]
+filterwarnings = ["ignore::DeprecationWarning:passlib.handlers.argon2"]
 markers = [
     "testFastAPIApp: marks tests for FastAPI application instance",
     "testMainFunction: marks tests for main() function",
@@ -68,6 +64,7 @@ plugins = ["sqlalchemy.ext.mypy.plugin"]
 
 [tool.poe.tasks]
 start = "uvicorn app.main:app --reload"
+start-public = "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 test = "pytest"
 type-check = "mypy app"
 lint = "ruff check ."
@@ -94,4 +91,3 @@ dev = [
     "asyncpg>=0.31.0",
     "sqlalchemy>=2.0.45",
 ]
-
