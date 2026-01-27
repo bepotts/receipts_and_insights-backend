@@ -16,6 +16,7 @@ from app.models.user_session import UserSession
 from app.schemas.user import User as UserSchema
 from app.schemas.user import UserCreate, UserUpdate
 from app.utils.email import format_email
+from app.utils.user import get_user_by_id
 
 router = APIRouter()
 
@@ -30,13 +31,7 @@ def get_users(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
 @router.get("/{user_id}", response_model=UserSchema)
 def get_user(user_id: int, db: Session = Depends(get_db)):
     """Get a user by ID"""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id {user_id} not found",
-        )
-    return user
+    return get_user_by_id(user_id, db)
 
 
 # Maybe this function shouldn't exist? It's the same as the login endpoint.
@@ -92,12 +87,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
 @router.put("/{user_id}", response_model=UserSchema)
 def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get_db)):
     """Update a user"""
-    db_user = db.query(User).filter(User.id == user_id).first()
-    if not db_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id {user_id} not found",
-        )
+    db_user = get_user_by_id(user_id, db)
 
     # Update only provided fields
     if user_update.first_name is not None:
@@ -129,12 +119,7 @@ def update_user(user_id: int, user_update: UserUpdate, db: Session = Depends(get
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_user(user_id: int, db: Session = Depends(get_db)):
     """Delete a user"""
-    db_user = db.query(User).filter(User.id == user_id).first()
-    if not db_user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"User with id {user_id} not found",
-        )
+    db_user = get_user_by_id(user_id, db)
     db.delete(db_user)
     db.commit()
     return None

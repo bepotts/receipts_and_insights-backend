@@ -39,7 +39,9 @@ def upgrade() -> None:
     # Create indexes for photos table
     op.create_index(op.f("ix_photos_id"), "photos", ["id"], unique=False)
     op.create_index(op.f("ix_photos_user_id"), "photos", ["user_id"], unique=False)
-    op.create_index(op.f("ix_photos_created_at"), "photos", ["created_at"], unique=False)
+    op.create_index(
+        op.f("ix_photos_created_at"), "photos", ["created_at"], unique=False
+    )
 
 
 def downgrade() -> None:

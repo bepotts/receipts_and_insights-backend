@@ -79,4 +79,5 @@ dmypy.json
 *.key
 temp/
 tmp/
+uploads/
 
