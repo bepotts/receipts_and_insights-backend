@@ -3,8 +3,7 @@ Unit tests for photo endpoints
 """
 
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import ANY, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from fastapi import status
@@ -397,7 +396,7 @@ class TestGetPhoto:
         with patch("app.api.v1.endpoints.photos.get_photo_by_id") as mock_get_photo:
             mock_get_photo.side_effect = HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Photo with id 999 not found",
+                detail="Photo with id 999 not found",
             )
 
             response = test_client.get(PHOTOS_ENDPOINT_WITH_ID_999)
@@ -471,7 +470,7 @@ class TestDeletePhoto:
         with patch("app.api.v1.endpoints.photos.get_photo_by_id") as mock_get_photo:
             mock_get_photo.side_effect = HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Photo with id 999 not found",
+                detail="Photo with id 999 not found",
             )
 
             response = test_client.delete(PHOTOS_ENDPOINT_WITH_ID_999)

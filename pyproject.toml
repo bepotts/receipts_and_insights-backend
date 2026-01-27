@@ -53,6 +53,7 @@ markers = [
     "testAppEndpoints: marks tests for app endpoints and routing",
     "testUserEndpoints: marks tests for user endpoints",
     "testAuthEndpoints: marks tests for auth endpoints",
+    "testPhotoEndpoints: marks tests for photo endpoints",
 ]
 
 [tool.mypy]
@@ -69,6 +70,7 @@ start-public = "uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
 test = "pytest"
 type-check = "mypy app"
 lint = "ruff check ."
+lint-fix = "ruff check . --fix"
 format = "ruff format ."
 caddy = "caddy run --config Caddyfile"
 migrate = "alembic upgrade head"
