@@ -212,7 +212,9 @@ class TestUploadPhoto:
         mock_db_session.commit.assert_called_once()
         mock_db_session.refresh.assert_called_once_with(mock_photo_instance)
 
-    def test_upload_photo_invalid_file_type(self, test_client, mock_db_session, sample_user):
+    def test_upload_photo_invalid_file_type(
+        self, test_client, mock_db_session, sample_user
+    ):
         """Test uploading a non-image file"""
         # Mock user lookup
         mock_query_user = Mock()
@@ -236,7 +238,9 @@ class TestUploadPhoto:
         mock_db_session.query.return_value = mock_query_user
 
         form_data = {"user_id": 999}
-        files = {"file": (TEST_PHOTO_FILENAME, b"fake image content", TEST_PHOTO_MIME_TYPE)}
+        files = {
+            "file": (TEST_PHOTO_FILENAME, b"fake image content", TEST_PHOTO_MIME_TYPE)
+        }
 
         response = test_client.post(PHOTOS_ENDPOINT, data=form_data, files=files)
 
@@ -285,7 +289,9 @@ class TestUploadPhoto:
         mock_open.side_effect = IOError("Disk full")
 
         form_data = {"user_id": TEST_USER_ID}
-        files = {"file": (TEST_PHOTO_FILENAME, b"fake image content", TEST_PHOTO_MIME_TYPE)}
+        files = {
+            "file": (TEST_PHOTO_FILENAME, b"fake image content", TEST_PHOTO_MIME_TYPE)
+        }
 
         response = test_client.post(PHOTOS_ENDPOINT, data=form_data, files=files)
 
@@ -323,9 +329,7 @@ class TestGetPhotos:
     ):
         """Test getting photos filtered by user_id"""
         mock_query = Mock()
-        mock_query.filter.return_value.offset.return_value.limit.return_value.all.return_value = (
-            sample_photos_list
-        )
+        mock_query.filter.return_value.offset.return_value.limit.return_value.all.return_value = sample_photos_list
         mock_db_session.query.return_value = mock_query
 
         response = test_client.get(f"{PHOTOS_ENDPOINT}?user_id={TEST_USER_ID}")
