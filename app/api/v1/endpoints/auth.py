@@ -9,38 +9,28 @@ from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.security import get_password_hash
+from app.core.security import verify_password
 from app.models.user import User
 from app.models.user_session import UserSession
 from app.schemas.user import User as UserSchema
-from app.schemas.user import UserCreate
+from app.schemas.user import UserCredentials
 from app.utils.email import format_email
 
 router = APIRouter()
 
 
 @router.post("/login", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
-def login(user: UserCreate, response: Response, db: Session = Depends(get_db)):
-    """Create a new user"""
-    formatted_email = format_email(str(user.email))
-    # Check if user with email already exists
+def login(
+    credentials: UserCredentials, response: Response, db: Session = Depends(get_db)
+):
+    """Log in an existing user with email and password"""
+    formatted_email = format_email(str(credentials.email))
     db_user = db.query(User).filter(User.email == formatted_email).first()
-    if db_user:
+    if not db_user or not verify_password(credentials.password, db_user.password):
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User with this email already exists",
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password",
         )
-
-    hashed_password = get_password_hash(user.password)
-    db_user = User(
-        first_name=user.first_name,
-        last_name=user.last_name,
-        email=formatted_email,
-        password=hashed_password,
-    )
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
 
     # Create a new user session
     session_token = secrets.token_urlsafe(32)

@@ -35,3 +35,10 @@ class User(UserBase):
     session_token: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class UserCredentials(BaseModel):
+    """User credentials with email and password"""
+
+    email: EmailStr
+    password: str
