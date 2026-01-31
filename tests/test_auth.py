@@ -2,7 +2,7 @@
 Unit tests for auth endpoints
 """
 
-from unittest.mock import ANY, MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from fastapi import status
@@ -19,12 +19,8 @@ TEST_USER_FIRST_NAME = "Test"
 TEST_USER_LAST_NAME = "User"
 TEST_USER_EMAIL = "test@example.com"
 TEST_PASSWORD = "testpassword123"
-NEW_USER_FIRST_NAME = "New"
-NEW_USER_LAST_NAME = "User"
-NEW_USER_EMAIL = "newuser@example.com"
 
-MSG_ALREADY_EXISTS = "already exists"
-MSG_EMAIL = "email"
+MSG_INVALID_CREDENTIALS = "invalid email or password"
 
 
 @pytest.fixture
@@ -57,7 +53,7 @@ def test_client(override_get_db):
 
 @pytest.fixture
 def existing_user():
-    """Fixture for existing user model"""
+    """Fixture for existing user model with hashed password"""
     from app.models.user import User
 
     user = User(
@@ -65,6 +61,7 @@ def existing_user():
         first_name=TEST_USER_FIRST_NAME,
         last_name=TEST_USER_LAST_NAME,
         email=TEST_USER_EMAIL,
+        password="hashed_password",
     )
     return user
 
@@ -76,17 +73,20 @@ class TestLogin:
     @patch("app.api.v1.endpoints.auth.UserSession")
     @patch("app.api.v1.endpoints.auth.secrets")
     @patch("app.api.v1.endpoints.auth.datetime")
-    @patch("app.api.v1.endpoints.auth.User")
+    @patch("app.api.v1.endpoints.auth.verify_password")
     def test_login_success(
         self,
-        mock_user_class,
+        mock_verify_password,
         mock_datetime,
         mock_secrets,
         mock_user_session_class,
         test_client,
         mock_db_session,
+        existing_user,
     ):
-        """Test successful login (user creation)"""
+        """Test successful login with valid credentials"""
+        mock_verify_password.return_value = True
+
         # Mock session token
         MOCK_SESSION_TOKEN = "mock_session_token_12345"
         mock_secrets.token_urlsafe.return_value = MOCK_SESSION_TOKEN
@@ -100,18 +100,10 @@ class TestLogin:
         mock_datetime.timedelta = timedelta
         mock_datetime.timezone = timezone
 
-        # Mock checking if user exists (should return None for new user)
-        mock_query_email = Mock()
-        mock_query_email.filter.return_value.first.return_value = None
-        mock_db_session.query.return_value = mock_query_email
-
-        # Create a mock user instance that will be returned
-        mock_user_instance = MagicMock()
-        mock_user_instance.id = 1
-        mock_user_instance.first_name = NEW_USER_FIRST_NAME
-        mock_user_instance.last_name = NEW_USER_LAST_NAME
-        mock_user_instance.email = NEW_USER_EMAIL.lower()
-        mock_user_class.return_value = mock_user_instance
+        # Mock user lookup - return existing user
+        mock_query = Mock()
+        mock_query.filter.return_value.first.return_value = existing_user
+        mock_db_session.query.return_value = mock_query
 
         # Create a mock user session instance
         mock_session_instance = MagicMock()
@@ -119,21 +111,18 @@ class TestLogin:
 
         mock_db_session.add = Mock()
         mock_db_session.commit = Mock()
-        mock_db_session.refresh = Mock()
 
-        user_data = {
-            "first_name": NEW_USER_FIRST_NAME,
-            "last_name": NEW_USER_LAST_NAME,
-            "email": NEW_USER_EMAIL,
+        credentials = {
+            "email": TEST_USER_EMAIL,
             "password": TEST_PASSWORD,
         }
-        response = test_client.post(AUTH_LOGIN_ENDPOINT, json=user_data)
+        response = test_client.post(AUTH_LOGIN_ENDPOINT, json=credentials)
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
-        assert data["first_name"] == NEW_USER_FIRST_NAME
-        assert data["last_name"] == NEW_USER_LAST_NAME
-        assert data["email"] == NEW_USER_EMAIL.lower()
+        assert data["first_name"] == TEST_USER_FIRST_NAME
+        assert data["last_name"] == TEST_USER_LAST_NAME
+        assert data["email"] == TEST_USER_EMAIL
         assert data["id"] == 1
         assert data["session_token"] == MOCK_SESSION_TOKEN
 
@@ -146,13 +135,11 @@ class TestLogin:
         assert "Secure" in cookie_header
         assert "SameSite=lax" in cookie_header
 
-        # Verify User was created
-        mock_user_class.assert_called_once_with(
-            first_name=NEW_USER_FIRST_NAME,
-            last_name=NEW_USER_LAST_NAME,
-            email=NEW_USER_EMAIL.lower(),
-            password=ANY,
+        # Verify password was verified
+        mock_verify_password.assert_called_once_with(
+            TEST_PASSWORD, existing_user.password
         )
+
         # Verify UserSession was created
         mock_user_session_class.assert_called_once()
         call_kwargs = mock_user_session_class.call_args[1]
@@ -160,35 +147,52 @@ class TestLogin:
         assert call_kwargs["session_token"] == MOCK_SESSION_TOKEN
         assert call_kwargs["is_active"] is True
 
-        # Verify both User and UserSession were added
-        assert mock_db_session.add.call_count == 2
-        mock_db_session.add.assert_any_call(mock_user_instance)
-        mock_db_session.add.assert_any_call(mock_session_instance)
+        # Verify only UserSession was added
+        mock_db_session.add.assert_called_once_with(mock_session_instance)
+        mock_db_session.commit.assert_called_once()
 
-        # Verify commit was called twice (once for user, once for session)
-        assert mock_db_session.commit.call_count == 2
-        mock_db_session.refresh.assert_called_once_with(mock_user_instance)
+    def test_login_user_not_found(self, test_client, mock_db_session):
+        """Test login when user does not exist"""
+        # Mock that no user is found
+        mock_query = Mock()
+        mock_query.filter.return_value.first.return_value = None
+        mock_db_session.query.return_value = mock_query
 
-    def test_login_duplicate_email(self, test_client, mock_db_session, existing_user):
-        """Test login with an email that already exists"""
-        # Mock that user with email already exists
+        credentials = {
+            "email": "nonexistent@example.com",
+            "password": TEST_PASSWORD,
+        }
+
+        response = test_client.post(AUTH_LOGIN_ENDPOINT, json=credentials)
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        data = response.json()
+        assert MSG_INVALID_CREDENTIALS in data["detail"].lower()
+
+    @patch("app.api.v1.endpoints.auth.verify_password")
+    def test_login_wrong_password(
+        self, mock_verify_password, test_client, mock_db_session, existing_user
+    ):
+        """Test login with incorrect password"""
+        mock_verify_password.return_value = False
+
         mock_query = Mock()
         mock_query.filter.return_value.first.return_value = existing_user
         mock_db_session.query.return_value = mock_query
 
-        user_data = {
-            "first_name": TEST_USER_FIRST_NAME,
-            "last_name": TEST_USER_LAST_NAME,
+        credentials = {
             "email": TEST_USER_EMAIL,
-            "password": TEST_PASSWORD,
+            "password": "wrongpassword",
         }
 
-        response = test_client.post(AUTH_LOGIN_ENDPOINT, json=user_data)
+        response = test_client.post(AUTH_LOGIN_ENDPOINT, json=credentials)
 
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
-        assert MSG_ALREADY_EXISTS in data["detail"].lower()
-        assert MSG_EMAIL in data["detail"].lower()
+        assert MSG_INVALID_CREDENTIALS in data["detail"].lower()
+
+        # Verify no session was created
+        mock_db_session.add.assert_not_called()
 
 
 @pytest.mark.testAuthEndpoints
