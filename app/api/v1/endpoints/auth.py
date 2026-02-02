@@ -19,7 +19,9 @@ from app.utils.email import format_email
 router = APIRouter()
 
 
-@router.post("/register", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=UserSchema, status_code=status.HTTP_201_CREATED
+)
 def register(user: UserCreate, db: Session = Depends(get_db)):
     """Create a new user"""
     formatted_email = format_email(str(user.email))
