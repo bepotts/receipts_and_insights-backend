@@ -123,8 +123,8 @@ class TestLogin:
         assert data["first_name"] == TEST_USER_FIRST_NAME
         assert data["last_name"] == TEST_USER_LAST_NAME
         assert data["email"] == TEST_USER_EMAIL
-        assert data["id"] == 1
-        assert data["session_token"] == MOCK_SESSION_TOKEN
+        assert "id" not in data
+        assert "session_token" not in data
 
         # Verify cookie was set in response headers
         assert "set-cookie" in response.headers

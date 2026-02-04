@@ -12,7 +12,7 @@ from app.core.database import get_db
 from app.core.security import get_password_hash, verify_password
 from app.models.user import User
 from app.models.user_session import UserSession
-from app.schemas.user import User as UserSchema
+from app.schemas.user import MeResponse, User as UserSchema
 from app.schemas.user import UserCreate, UserCredentials
 from app.utils.email import format_email
 
@@ -70,7 +70,7 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     return user_dict
 
 
-@router.post("/login", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/login", response_model=MeResponse, status_code=status.HTTP_201_CREATED)
 def login(
     credentials: UserCredentials, response: Response, db: Session = Depends(get_db)
 ):
@@ -108,13 +108,11 @@ def login(
         samesite="lax",
     )
 
-    # Return user with session_token
+    # Return user (session_token is set via cookie)
     user_dict = {
-        "id": db_user.id,
         "first_name": db_user.first_name,
         "last_name": db_user.last_name,
         "email": db_user.email,
-        "session_token": session_token,
     }
     return user_dict
 
