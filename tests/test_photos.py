@@ -30,6 +30,7 @@ TEST_PHOTO_FILE_PATH = "uploads/test_uuid.jpg"
 
 MSG_NOT_FOUND = "not found"
 MSG_MUST_BE_IMAGE = "must be an image"
+MOCK_SESSION_TOKEN = "mock_session_token_12345"
 
 
 @pytest.fixture
@@ -70,6 +71,14 @@ def sample_user():
         email="test@example.com",
     )
     return user
+
+
+@pytest.fixture
+def mock_user_session():
+    """Fixture for mocked user session (from session_token cookie)"""
+    session = Mock()
+    session.user_id = TEST_USER_ID
+    return session
 
 
 @pytest.fixture
@@ -137,7 +146,7 @@ class TestUploadPhoto:
         mock_path,
         test_client,
         mock_db_session,
-        sample_user,
+        mock_user_session,
     ):
         """Test successful photo upload"""
         # Mock UUID generation
@@ -157,10 +166,10 @@ class TestUploadPhoto:
         mock_file.content_type = TEST_PHOTO_MIME_TYPE
         mock_file.read = Mock(return_value=mock_file_content)
 
-        # Mock user lookup
-        mock_query_user = Mock()
-        mock_query_user.filter.return_value.first.return_value = sample_user
-        mock_db_session.query.return_value = mock_query_user
+        # Mock session lookup (from session_token cookie)
+        mock_query_session = Mock()
+        mock_query_session.filter.return_value.first.return_value = mock_user_session
+        mock_db_session.query.return_value = mock_query_session
 
         # Mock photo instance
         mock_photo_instance = MagicMock()
@@ -186,11 +195,11 @@ class TestUploadPhoto:
         mock_open.return_value.__enter__.return_value = mock_file_path
 
         form_data = {
-            "user_id": TEST_USER_ID,
             "title": TEST_PHOTO_TITLE,
             "description": TEST_PHOTO_DESCRIPTION,
         }
         files = {"file": (TEST_PHOTO_FILENAME, mock_file_content, TEST_PHOTO_MIME_TYPE)}
+        test_client.cookies["session_token"] = MOCK_SESSION_TOKEN
 
         response = test_client.post(PHOTOS_UPLOAD_ENDPOINT, data=form_data, files=files)
 
@@ -214,16 +223,17 @@ class TestUploadPhoto:
         mock_db_session.refresh.assert_called_once_with(mock_photo_instance)
 
     def test_upload_photo_invalid_file_type(
-        self, test_client, mock_db_session, sample_user
+        self, test_client, mock_db_session, mock_user_session
     ):
         """Test uploading a non-image file"""
-        # Mock user lookup
-        mock_query_user = Mock()
-        mock_query_user.filter.return_value.first.return_value = sample_user
-        mock_db_session.query.return_value = mock_query_user
+        # Mock session lookup
+        mock_query_session = Mock()
+        mock_query_session.filter.return_value.first.return_value = mock_user_session
+        mock_db_session.query.return_value = mock_query_session
 
-        form_data = {"user_id": TEST_USER_ID}
+        form_data = {}
         files = {"file": ("document.pdf", b"fake pdf content", "application/pdf")}
+        test_client.cookies["session_token"] = MOCK_SESSION_TOKEN
 
         response = test_client.post(PHOTOS_UPLOAD_ENDPOINT, data=form_data, files=files)
 
@@ -231,24 +241,38 @@ class TestUploadPhoto:
         data = response.json()
         assert MSG_MUST_BE_IMAGE in data["detail"].lower()
 
-    def test_upload_photo_user_not_found(self, test_client, mock_db_session):
-        """Test uploading a photo for a non-existent user"""
-        # Mock user lookup returning None
-        mock_query_user = Mock()
-        mock_query_user.filter.return_value.first.return_value = None
-        mock_db_session.query.return_value = mock_query_user
+    def test_upload_photo_invalid_session(self, test_client, mock_db_session):
+        """Test uploading a photo with invalid or expired session"""
+        # Mock session lookup returning None (invalid/expired token)
+        mock_query_session = Mock()
+        mock_query_session.filter.return_value.first.return_value = None
+        mock_db_session.query.return_value = mock_query_session
 
-        form_data = {"user_id": 999}
+        form_data = {}
         files = {
             "file": (TEST_PHOTO_FILENAME, b"fake image content", TEST_PHOTO_MIME_TYPE)
         }
+        test_client.cookies["session_token"] = "invalid_or_expired_token"
 
         response = test_client.post(PHOTOS_UPLOAD_ENDPOINT, data=form_data, files=files)
 
-        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
-        assert MSG_NOT_FOUND in data["detail"].lower()
-        assert "999" in data["detail"]
+        assert "invalid" in data["detail"].lower() or "expired" in data["detail"].lower()
+
+    def test_upload_photo_missing_session(self, test_client, mock_db_session):
+        """Test uploading a photo without session cookie"""
+        form_data = {}
+        files = {
+            "file": (TEST_PHOTO_FILENAME, b"fake image content", TEST_PHOTO_MIME_TYPE)
+        }
+        # No session_token cookie set
+
+        response = test_client.post(PHOTOS_UPLOAD_ENDPOINT, data=form_data, files=files)
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        data = response.json()
+        assert "missing" in data["detail"].lower()
 
     @patch("app.api.v1.endpoints.photos.Path")
     @patch("app.api.v1.endpoints.photos.uuid")
@@ -260,7 +284,7 @@ class TestUploadPhoto:
         mock_path,
         test_client,
         mock_db_session,
-        sample_user,
+        mock_user_session,
     ):
         """Test handling file save error"""
         # Mock UUID generation
@@ -281,18 +305,19 @@ class TestUploadPhoto:
         mock_file.content_type = TEST_PHOTO_MIME_TYPE
         mock_file.read = Mock(return_value=b"fake image content")
 
-        # Mock user lookup
-        mock_query_user = Mock()
-        mock_query_user.filter.return_value.first.return_value = sample_user
-        mock_db_session.query.return_value = mock_query_user
+        # Mock session lookup
+        mock_query_session = Mock()
+        mock_query_session.filter.return_value.first.return_value = mock_user_session
+        mock_db_session.query.return_value = mock_query_session
 
         # Mock open to raise an error
         mock_open.side_effect = IOError("Disk full")
 
-        form_data = {"user_id": TEST_USER_ID}
+        form_data = {}
         files = {
             "file": (TEST_PHOTO_FILENAME, b"fake image content", TEST_PHOTO_MIME_TYPE)
         }
+        test_client.cookies["session_token"] = MOCK_SESSION_TOKEN
 
         response = test_client.post(PHOTOS_UPLOAD_ENDPOINT, data=form_data, files=files)
 

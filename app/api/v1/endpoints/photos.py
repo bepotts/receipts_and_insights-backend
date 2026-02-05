@@ -3,17 +3,19 @@ Photo API endpoints
 """
 
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
+from fastapi import APIRouter, Cookie, Depends, File, Form, HTTPException, UploadFile, status
 from sqlalchemy.orm import Session
 
+from app.api.v1.endpoints.me import _unauthorized_with_cleared_cookie
 from app.core.database import get_db
 from app.models.photo import Photo
+from app.models.user_session import UserSession
 from app.schemas.photo import Photo as PhotoSchema
 from app.utils.photo import get_photo_by_id
-from app.utils.user import get_user_by_id
 
 router = APIRouter()
 
@@ -25,14 +27,29 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 @router.post("/upload", response_model=PhotoSchema, status_code=status.HTTP_201_CREATED)
 async def upload_photo(
     file: UploadFile = File(...),
-    user_id: int = Form(...),
     title: Optional[str] = Form(None),
     description: Optional[str] = Form(None),
+    session_token: str | None = Cookie(None),
     db: Session = Depends(get_db),
 ):
-    """Upload a photo"""
-    # Verify user exists
-    get_user_by_id(user_id, db)
+    """Upload a photo. User is identified by session_token cookie."""
+    if not session_token:
+        return _unauthorized_with_cleared_cookie("Missing session token")
+
+    now = datetime.now(timezone.utc)
+    db_session = (
+        db.query(UserSession)
+        .filter(
+            UserSession.session_token == session_token,
+            UserSession.is_active,
+            UserSession.expires_at > now,
+        )
+        .first()
+    )
+    if not db_session:
+        return _unauthorized_with_cleared_cookie("Invalid or expired session")
+
+    user_id = db_session.user_id
 
     # Validate file type (images only)
     if not file.content_type or not file.content_type.startswith("image/"):
