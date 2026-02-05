@@ -16,6 +16,7 @@ from app.models.user import User
 
 # String constants
 PHOTOS_ENDPOINT = "/api/v1/photos/"
+PHOTOS_UPLOAD_ENDPOINT = "/api/v1/photos/upload"
 PHOTOS_ENDPOINT_WITH_ID_1 = "/api/v1/photos/1"
 PHOTOS_ENDPOINT_WITH_ID_999 = "/api/v1/photos/999"
 
@@ -122,7 +123,7 @@ def sample_photos_list():
 
 @pytest.mark.testPhotoEndpoints
 class TestUploadPhoto:
-    """Tests for POST /photos/ endpoint"""
+    """Tests for POST /photos/upload endpoint"""
 
     @patch("app.api.v1.endpoints.photos.Path")
     @patch("app.api.v1.endpoints.photos.uuid")
@@ -191,7 +192,7 @@ class TestUploadPhoto:
         }
         files = {"file": (TEST_PHOTO_FILENAME, mock_file_content, TEST_PHOTO_MIME_TYPE)}
 
-        response = test_client.post(PHOTOS_ENDPOINT, data=form_data, files=files)
+        response = test_client.post(PHOTOS_UPLOAD_ENDPOINT, data=form_data, files=files)
 
         assert response.status_code == status.HTTP_201_CREATED
         data = response.json()
@@ -224,7 +225,7 @@ class TestUploadPhoto:
         form_data = {"user_id": TEST_USER_ID}
         files = {"file": ("document.pdf", b"fake pdf content", "application/pdf")}
 
-        response = test_client.post(PHOTOS_ENDPOINT, data=form_data, files=files)
+        response = test_client.post(PHOTOS_UPLOAD_ENDPOINT, data=form_data, files=files)
 
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         data = response.json()
@@ -242,7 +243,7 @@ class TestUploadPhoto:
             "file": (TEST_PHOTO_FILENAME, b"fake image content", TEST_PHOTO_MIME_TYPE)
         }
 
-        response = test_client.post(PHOTOS_ENDPOINT, data=form_data, files=files)
+        response = test_client.post(PHOTOS_UPLOAD_ENDPOINT, data=form_data, files=files)
 
         assert response.status_code == status.HTTP_404_NOT_FOUND
         data = response.json()
@@ -293,7 +294,7 @@ class TestUploadPhoto:
             "file": (TEST_PHOTO_FILENAME, b"fake image content", TEST_PHOTO_MIME_TYPE)
         }
 
-        response = test_client.post(PHOTOS_ENDPOINT, data=form_data, files=files)
+        response = test_client.post(PHOTOS_UPLOAD_ENDPOINT, data=form_data, files=files)
 
         assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
         data = response.json()

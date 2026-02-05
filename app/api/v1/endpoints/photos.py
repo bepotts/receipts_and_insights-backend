@@ -22,7 +22,7 @@ UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 
-@router.post("/", response_model=PhotoSchema, status_code=status.HTTP_201_CREATED)
+@router.post("/upload", response_model=PhotoSchema, status_code=status.HTTP_201_CREATED)
 async def upload_photo(
     file: UploadFile = File(...),
     user_id: int = Form(...),
