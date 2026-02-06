@@ -258,7 +258,9 @@ class TestUploadPhoto:
 
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         data = response.json()
-        assert "invalid" in data["detail"].lower() or "expired" in data["detail"].lower()
+        assert (
+            "invalid" in data["detail"].lower() or "expired" in data["detail"].lower()
+        )
 
     def test_upload_photo_missing_session(self, test_client, mock_db_session):
         """Test uploading a photo without session cookie"""
