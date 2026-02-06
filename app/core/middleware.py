@@ -2,22 +2,21 @@
 Middleware configuration for the application
 """
 
-import logging
 import time
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from loguru import logger
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-
-logger = logging.getLogger(__name__)
+from starlette.responses import Response
 
 # Maximum body size to log in full (bytes); larger payloads are truncated
 MAX_BODY_LOG_SIZE = 10 * 1024  # 10 KB
 
 
 def _format_body_for_logging(body: bytes) -> str:
-    """Format request body for logging, handling binary and large payloads."""
+    """Format request/response body for logging, handling binary and large payloads."""
     if not body:
         return "(empty)"
     if len(body) > MAX_BODY_LOG_SIZE:
@@ -34,7 +33,7 @@ def _format_body_for_logging(body: bytes) -> str:
 
 class RequestLoggingMiddleware(BaseHTTPMiddleware):
     """
-    Middleware that logs every request made to the application.
+    Middleware that logs every request and response entering and leaving the application.
     """
 
     async def dispatch(self, request: Request, call_next):
@@ -54,7 +53,7 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         body_str = _format_body_for_logging(body)
         logger.info(
-            "Request started: %s %s (client: %s) body: %s",
+            "Request IN: {} {} (client: {}) body: {}",
             method,
             path,
             client_host,
@@ -63,13 +62,26 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
 
         response = await call_next(request)
 
+        # Capture response body for logging
+        response_body = b""
+        if hasattr(response, "body_iterator"):
+            response_body = b"".join([chunk async for chunk in response.body_iterator])
+            response = Response(
+                content=response_body,
+                status_code=response.status_code,
+                headers=dict(response.headers),
+                media_type=getattr(response, "media_type", None),
+            )
+
         duration_ms = (time.perf_counter() - start_time) * 1000
+        response_body_str = _format_body_for_logging(response_body)
         logger.info(
-            "Request completed: %s %s -> %d (%.2f ms)",
+            "Response OUT: {} {} -> {} ({} ms) body: {}",
             method,
             path,
             response.status_code,
-            duration_ms,
+            round(duration_ms, 2),
+            response_body_str,
         )
 
         return response
