@@ -2,7 +2,6 @@
 Loguru logging configuration for the application.
 """
 
-import logging
 import sys
 from pathlib import Path
 
@@ -13,8 +12,7 @@ from app.config import settings
 
 def setup_logging() -> None:
     """
-    Configure loguru: remove default handler, add console and file sinks,
-    and intercept standard library logging.
+    Configure loguru: remove default handler, add console and file sinks.
     """
     # Remove default handler so we control all sinks
     logger.remove()
@@ -49,24 +47,3 @@ def setup_logging() -> None:
         compression="zip",
         encoding="utf-8",
     )
-
-    # Intercept standard library logging so logging.getLogger() goes to loguru
-    class InterceptHandler(logging.Handler):
-        def emit(self, record: logging.LogRecord) -> None:
-            try:
-                level = logger.level(record.levelname).name
-            except ValueError:
-                level = record.levelno
-
-            frame, depth = logging.currentframe(), 2
-            while frame.f_code.co_filename == logging.__file__:
-                frame = frame.f_back
-                depth += 1
-
-            logger.opt(depth=depth, exception=record.exc_info).log(
-                level, record.getMessage()
-            )
-
-    logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
-    for name in ("uvicorn", "uvicorn.error", "uvicorn.access"):
-        logging.getLogger(name).handlers = [InterceptHandler()]
