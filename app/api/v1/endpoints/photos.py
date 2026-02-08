@@ -2,6 +2,7 @@
 Photo API endpoints
 """
 
+import base64
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -17,6 +18,7 @@ from fastapi import (
     UploadFile,
     status,
 )
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.me import _unauthorized_with_cleared_cookie
@@ -24,6 +26,7 @@ from app.core.database import get_db
 from app.models.photo import Photo
 from app.models.user_session import UserSession
 from app.schemas.photo import Photo as PhotoSchema
+from app.schemas.photo import PhotoWithFile
 from app.utils.photo import get_photo_by_id
 
 router = APIRouter()
@@ -67,10 +70,14 @@ async def upload_photo(
             detail="File must be an image",
         )
 
+    # Store in user's unique directory (named by user id)
+    user_dir = UPLOAD_DIR / str(user_id)
+    user_dir.mkdir(parents=True, exist_ok=True)
+
     # Generate unique filename
     file_extension = Path(file.filename).suffix if file.filename else ".jpg"
     unique_filename = f"{uuid.uuid4()}{file_extension}"
-    file_path = UPLOAD_DIR / unique_filename
+    file_path = user_dir / unique_filename
 
     # Save file to disk
     try:
@@ -105,19 +112,47 @@ async def upload_photo(
         )
 
 
-@router.get("/", response_model=List[PhotoSchema])
+@router.get("/", response_model=List[PhotoWithFile])
 def get_photos(
-    user_id: Optional[int] = None,
-    skip: int = 0,
-    limit: int = 100,
+    session_token: str | None = Cookie(None),
     db: Session = Depends(get_db),
 ):
-    """Get all photos, optionally filtered by user_id"""
-    query = db.query(Photo)
-    if user_id:
-        query = query.filter(Photo.user_id == user_id)
-    photos = query.offset(skip).limit(limit).all()
-    return photos
+    """Get all photos for the current user with file content from each file_path."""
+    if not session_token:
+        return _unauthorized_with_cleared_cookie("Missing session token")
+
+    now = datetime.now(timezone.utc)
+    db_session = (
+        db.query(UserSession)
+        .filter(
+            UserSession.session_token == session_token,
+            UserSession.is_active,
+            UserSession.expires_at > now,
+        )
+        .first()
+    )
+    if not db_session:
+        return _unauthorized_with_cleared_cookie("Invalid or expired session")
+
+    user_id = db_session.user_id
+    photos = db.query(Photo).filter(Photo.user_id == user_id).all()
+    result = []
+    for photo in photos:
+        file_content = None
+        file_path = Path(photo.file_path)
+        if file_path.exists():
+            try:
+                raw = file_path.read_bytes()
+                file_content = base64.b64encode(raw).decode("ascii")
+            except OSError:
+                pass
+        result.append(
+            PhotoWithFile(
+                **PhotoSchema.model_validate(photo).model_dump(),
+                file_content=file_content,
+            )
+        )
+    return result
 
 
 @router.get("/{photo_id}", response_model=PhotoSchema)

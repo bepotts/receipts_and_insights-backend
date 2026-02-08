@@ -332,14 +332,17 @@ class TestUploadPhoto:
 class TestGetPhotos:
     """Tests for GET /photos/ endpoint"""
 
-    def test_get_photos_success(self, test_client, mock_db_session, sample_photos_list):
-        """Test successful retrieval of all photos"""
-        mock_query = Mock()
-        mock_query.offset.return_value.limit.return_value.all.return_value = (
-            sample_photos_list
-        )
-        mock_db_session.query.return_value = mock_query
+    def test_get_photos_success(
+        self, test_client, mock_db_session, mock_user_session, sample_photos_list
+    ):
+        """Test successful retrieval of all current user's photos (session_token cookie)."""
+        mock_query_session = Mock()
+        mock_query_session.filter.return_value.first.return_value = mock_user_session
+        mock_query_photos = Mock()
+        mock_query_photos.filter.return_value.all.return_value = sample_photos_list
+        mock_db_session.query.side_effect = [mock_query_session, mock_query_photos]
 
+        test_client.cookies["session_token"] = MOCK_SESSION_TOKEN
         response = test_client.get(PHOTOS_ENDPOINT)
 
         assert response.status_code == status.HTTP_200_OK
@@ -352,51 +355,73 @@ class TestGetPhotos:
         assert data[1]["filename"] == "photo2.jpg"
         assert data[1]["title"] == "Photo 2"
 
-    def test_get_photos_with_user_filter(
-        self, test_client, mock_db_session, sample_photos_list
+    def test_get_photos_filters_by_session_user(
+        self, test_client, mock_db_session, mock_user_session, sample_photos_list
     ):
-        """Test getting photos filtered by user_id"""
-        mock_query = Mock()
-        mock_query.filter.return_value.offset.return_value.limit.return_value.all.return_value = sample_photos_list
-        mock_db_session.query.return_value = mock_query
+        """Test getting photos filters by current user (from session_token cookie)."""
+        mock_query_session = Mock()
+        mock_query_session.filter.return_value.first.return_value = mock_user_session
+        mock_query_photos = Mock()
+        mock_query_photos.filter.return_value.all.return_value = sample_photos_list
+        mock_db_session.query.side_effect = [mock_query_session, mock_query_photos]
 
-        response = test_client.get(f"{PHOTOS_ENDPOINT}?user_id={TEST_USER_ID}")
+        test_client.cookies["session_token"] = MOCK_SESSION_TOKEN
+        response = test_client.get(PHOTOS_ENDPOINT)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert len(data) == 2
-        # Verify filter was called (can't directly compare SQLAlchemy filter expressions)
-        mock_query.filter.assert_called_once()
+        mock_query_photos.filter.assert_called_once()
 
-    def test_get_photos_with_pagination(
-        self, test_client, mock_db_session, sample_photos_list
+    def test_get_photos_empty_list(
+        self, test_client, mock_db_session, mock_user_session
     ):
-        """Test getting photos with pagination parameters"""
-        mock_query = Mock()
-        mock_query.offset.return_value.limit.return_value.all.return_value = (
-            sample_photos_list
-        )
-        mock_db_session.query.return_value = mock_query
-
-        response = test_client.get(f"{PHOTOS_ENDPOINT}?skip=0&limit=10")
-
-        assert response.status_code == status.HTTP_200_OK
-        data = response.json()
-        assert len(data) == 2
-        mock_query.offset.assert_called_once_with(0)
-        mock_query.offset.return_value.limit.assert_called_once_with(10)
-
-    def test_get_photos_empty_list(self, test_client, mock_db_session):
         """Test getting photos when no photos exist"""
-        mock_query = Mock()
-        mock_query.offset.return_value.limit.return_value.all.return_value = []
-        mock_db_session.query.return_value = mock_query
+        mock_query_session = Mock()
+        mock_query_session.filter.return_value.first.return_value = mock_user_session
+        mock_query_photos = Mock()
+        mock_query_photos.filter.return_value.all.return_value = []
+        mock_db_session.query.side_effect = [mock_query_session, mock_query_photos]
 
+        test_client.cookies["session_token"] = MOCK_SESSION_TOKEN
         response = test_client.get(PHOTOS_ENDPOINT)
 
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
         assert data == []
+
+    def test_get_photos_missing_session_token(
+        self, test_client, mock_db_session, sample_photos_list
+    ):
+        """Test get_photos without session_token cookie returns 401"""
+        mock_query = Mock()
+        mock_query.offset.return_value.limit.return_value.all.return_value = (
+            sample_photos_list
+        )
+        mock_db_session.query.return_value = mock_query
+        # No cookie set
+
+        response = test_client.get(PHOTOS_ENDPOINT)
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        mock_db_session.query.assert_not_called()
+
+    def test_get_photos_invalid_session(
+        self, test_client, mock_db_session, sample_photos_list
+    ):
+        """Test get_photos with invalid or expired session_token returns 401"""
+        mock_query_session = Mock()
+        mock_query_session.filter.return_value.first.return_value = None
+        mock_db_session.query.return_value = mock_query_session
+
+        test_client.cookies["session_token"] = "invalid_or_expired_token"
+        response = test_client.get(PHOTOS_ENDPOINT)
+
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        data = response.json()
+        assert (
+            "invalid" in data["detail"].lower() or "expired" in data["detail"].lower()
+        )
 
 
 @pytest.mark.testPhotoEndpoints

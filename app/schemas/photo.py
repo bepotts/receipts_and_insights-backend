@@ -34,3 +34,9 @@ class Photo(PhotoBase):
     updated_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class PhotoWithFile(Photo):
+    """Schema for photo response including file content from disk (base64)."""
+
+    file_content: Optional[str] = None  # base64-encoded file bytes, None if file missing
