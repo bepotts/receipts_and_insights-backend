@@ -18,7 +18,6 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.api.v1.endpoints.me import _unauthorized_with_cleared_cookie
