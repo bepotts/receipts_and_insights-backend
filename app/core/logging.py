@@ -35,16 +35,16 @@ def setup_logging() -> None:
         colorize=True,
     )
 
-    # File sink with rotation
+    # File sink: one file per day (e.g. app_2025-02-08.log)
     logs_dir = Path("logs")
     logs_dir.mkdir(exist_ok=True)
-    log_file = logs_dir / "app.log"
+    log_file = logs_dir / "app_{time:YYYY-MM-DD}.log"
 
     logger.add(
         log_file,
         format=log_format,
         level=log_level,
-        rotation="10 MB",
+        rotation="00:00",  # rotate at midnight so each day gets a new file
         retention="7 days",
         compression="zip",
         encoding="utf-8",
